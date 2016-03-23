@@ -7,10 +7,16 @@ app.config["JSON_SORT_KEYS"] = False
 
 @app.route('/rdap/ip/<ip>', methods=['GET'])
 def get_rdap_ip(ip):
-	obj = IPWhois(ip)
-	results_raw = obj.lookup_rdap(depth=1)
-	results = jsonify(results_raw)
-	return results
+	try:	
+		obj = IPWhois(ip)
+		results_raw = obj.lookup_rdap(depth=1)
+		status = 200
+		results = jsonify(results_raw)
+	except:
+		results_raw = jsonify({'status': "not_found"}) 
+		status = 404
+		results = jsonify({'status': "not_found"})
+	return results,status
 
 
 
