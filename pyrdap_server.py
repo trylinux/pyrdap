@@ -1,8 +1,13 @@
 from flask import Flask,jsonify,session
 from ipwhois import IPWhois
 import requests
+from elasticsearch import Elasticsearch
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
+
+@app.before_request
+def _elastic_connect():
+	es = Elasticsearch()
 
 
 @app.route('/rdap/ip/<ip>', methods=['GET'])
@@ -35,17 +40,25 @@ def get_rdap_asn(asn):
 
 @app.route('/whois/ip/<ip>', methods=['GET'])
 def get_whois_ip(ip):
-	try:
-		obj = IPWhois(ip)
-		results_raw = obj.lookup(get_referral=True)
+	es = Elasticsearch()
+	id_num = str(ip).strip("\.")
+	does_exist = es.exists(index='rwhois', doc_type='ipaddr', id = id_num)
+	if does_exist is not 0:
 		status = 200
-		results = jsonify(results_raw)
+		get_record = es.search(index='rwhois', body={"query": {"filtered": {"query":{ "query_string": { "query": ip}}}}})
+		results = jsonify(get_record)
+	else:
+		try:
+			obj = IPWhois(ip)
+			results_raw = obj.lookup(get_referral=True)
+			status = 200
+			results = jsonify(results_raw)
 	
-	except Exception as e:
-                print e
-                results_raw = jsonify({'status': "not_found"})
-                status = 404
-                results = jsonify({'status': "not_found"})
+		except Exception as e:
+        	        print e
+                	results_raw = jsonify({'status': "not_found"})
+	                status = 404
+        	        results = jsonify({'status': "not_found"})
         return results,status
 
 #@app.route('/whois/domain/<domain>', methods=['GET']
