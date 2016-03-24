@@ -9,7 +9,7 @@ app.config["JSON_SORT_KEYS"] = False
 def get_rdap_ip(ip):
 	try:	
 		obj = IPWhois(ip)
-		results_raw = obj.lookup_rdap()
+		results_raw = obj.lookup_rdap(depth=1)
 		status = 200
 		results = jsonify(results_raw)
 	except Exception as e:
@@ -48,5 +48,7 @@ def get_whois_ip(ip):
                 results = jsonify({'status': "not_found"})
         return results,status
 
+#@app.route('/whois/domain/<domain>', methods=['GET']
+	
 if __name__ == '__main__':
 	app.run(host='0.0.0.0',port=8006,debug=True,processes=10)
