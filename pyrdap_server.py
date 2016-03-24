@@ -43,7 +43,8 @@ def get_whois_ip(ip):
 	es = Elasticsearch()
 	id_num = str(ip).strip("\.")
 	does_exist = es.exists(index='rwhois', doc_type='ipaddr', id = id_num)
-	if does_exist is not 0:
+	print does_exist
+	if does_exist is True:
 		status = 200
 		get_record = es.search(index='rwhois', body={"query": {"filtered": {"query":{ "query_string": { "query": ip}}}}})
 		results = jsonify(get_record)
