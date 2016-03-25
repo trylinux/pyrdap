@@ -2,13 +2,10 @@ from flask import Flask,jsonify,session
 from ipwhois import IPWhois
 import requests
 import json
+import elastastore
 from elasticsearch import Elasticsearch
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
-
-@app.before_request
-def _elastic_connect():
-	es = Elasticsearch()
 
 
 @app.route('/rdap/ip/<ip>', methods=['GET'])
@@ -57,6 +54,8 @@ def get_whois_ip(ip):
 			results_raw = obj.lookup(get_referral=True)
 			status = 200
 			results = jsonify(results_raw)
+			id_num = str(ip).replace(".","0")
+			es.index(index='rwhois', doc_type='ipaddr', id=id_num, body=results_raw)
 	
 		except Exception as e:
         	        print e
@@ -66,6 +65,7 @@ def get_whois_ip(ip):
         return results,status
 
 #@app.route('/whois/domain/<domain>', methods=['GET']
+
 	
 if __name__ == '__main__':
-	app.run(host='0.0.0.0',port=8006,debug=True,processes=10)
+	app.run(host='0.0.0.0',port=8006,debug=True,threaded=True)
