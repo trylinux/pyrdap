@@ -1,6 +1,7 @@
 from flask import Flask,jsonify,session
 from ipwhois import IPWhois
 import requests
+import json
 from elasticsearch import Elasticsearch
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
@@ -41,13 +42,15 @@ def get_rdap_asn(asn):
 @app.route('/whois/ip/<ip>', methods=['GET'])
 def get_whois_ip(ip):
 	es = Elasticsearch()
-	id_num = str(ip).strip("\.")
+	print repr(ip)
+	id_num = str(ip).replace(".","0")
 	does_exist = es.exists(index='rwhois', doc_type='ipaddr', id = id_num)
 	print does_exist
 	if does_exist is True:
 		status = 200
-		get_record = es.search(index='rwhois', body={"query": {"filtered": {"query":{ "query_string": { "query": ip}}}}})
-		results = jsonify(get_record)
+		print "Found it!"
+		get_record = es.get(index='rwhois',doc_type='ipaddr', id = id_num)
+		results = jsonify(get_record['_source'])
 	else:
 		try:
 			obj = IPWhois(ip)

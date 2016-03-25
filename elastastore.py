@@ -11,7 +11,7 @@ def getargs():
 
 def store_whois(ip):
 	es = Elasticsearch()
-	index_num = str(ip).strip('\.')
+	index_num = str(ip).replace(".","0")
 	print index_num
 	url = "http://hailey.opendnsbl.net:8006/whois/ip/%s" % ip
 	ip_whois_record = requests.get(url)
