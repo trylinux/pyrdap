@@ -24,16 +24,31 @@ def get_rdap_ip(ip):
 
 @app.route('/rdap/asn/<asn>', methods=['GET'])
 def get_rdap_asn(asn):
-	try:
-		url = 'http://hailey.opendnsbl.net:8080/rdapbootstrap/autnum/%s' % asn
-		r = requests.get(url)
-		status = 200
-		results = jsonify(r.json())
-	except Exception as e:
-		print e
-		results_raw = jsonify({'status': "not_found"})
-                status = 404
-                results = jsonify({'status': "not_found"})
+	es = Elasticsearch()
+        does_exist = es.exists(index='whois', doc_type='asn_rdap', id = asn)
+        print does_exist
+        if does_exist is True:
+                status = 200
+                print "Found it!"
+                get_record = es.get(index='rdap',doc_type='asn', id = asn)
+                results = jsonify(get_record['_source'])
+	else:
+		try:
+			url = 'http://hailey.opendnsbl.net:8080/rdapbootstrap/autnum/%s' % asn
+			r = requests.get(url)
+			status = 200
+			b = r.json()
+			#c = json.loads(b)
+			#d = c['entities']
+			#print d
+			#e = json.dumps(c)
+			#es.index(index='rwhois', doc_type='asn_rdap', id=asn, body=json.dumps(c))
+			results = jsonify(b)
+		except Exception as e:
+			print e
+			results_raw = jsonify({'status': "not_found"})
+        	        status = 404
+	                results = jsonify({'status': "not_found"})
 	return results,status
 
 @app.route('/whois/ip/<ip>', methods=['GET'])
