@@ -10,16 +10,26 @@ app.config["JSON_SORT_KEYS"] = False
 
 @app.route('/rdap/ip/<ip>', methods=['GET'])
 def get_rdap_ip(ip):
-	try:	
-		obj = IPWhois(ip)
-		results_raw = obj.lookup_rdap(depth=1)
-		status = 200
-		results = jsonify(results_raw)
-	except Exception as e:
-		print e
-		results_raw = jsonify({'status': "not_found"}) 
-		status = 404
-		results = jsonify({'status': "not_found"})
+	es = Elasticsearch()
+        does_exist = es.exists(index='rdap', doc_type='ipaddr', id = ip)
+        print does_exist
+        if does_exist is True:
+                status = 200
+                print "Found it!"
+                get_record = es.get(index='rdap',doc_type='ipaddr', id = ip)
+                results = jsonify(get_record['_source'])
+	else:
+		try:
+			obj = IPWhois(ip)
+			results_raw = obj.lookup_rdap(depth=1)
+			status = 200
+			results = jsonify(results_raw)
+			es.index(index='rdap', doc_type='ipaddr', id=ip, body=json.dumps(results_raw))
+		except Exception as e:
+			print e
+			results_raw = jsonify({'status': "not_found"}) 
+			status = 404
+			results = jsonify({'status': "not_found"})
 	return results,status
 
 @app.route('/rdap/asn/<asn>', methods=['GET'])
@@ -42,7 +52,7 @@ def get_rdap_asn(asn):
 			#d = c['entities']
 			#print d
 			#e = json.dumps(c)
-			#es.index(index='rwhois', doc_type='asn_rdap', id=asn, body=json.dumps(c))
+			#es.index(index='rwhois', doc_type='asn', id=asn, body=json.dumps(b))
 			results = jsonify(b)
 		except Exception as e:
 			print e
@@ -79,7 +89,21 @@ def get_whois_ip(ip):
         	        results = jsonify({'status': "not_found"})
         return results,status
 
-#@app.route('/whois/domain/<domain>', methods=['GET']
+@app.route('/whois/search/<search>', methods=['GET'])
+def get_search(search):
+	es = Elasticsearch()
+	a = str(search)
+	try:
+		b = es.search(index='rwhois',size='10000', body={"query": {"filtered": {"query":{ "query_string": { "query": a}}}}})
+		status = 200
+		results = jsonify(b)
+	except Exception as e:
+		print e
+		results_raw = jsonify({'status': "not_found"})
+                status = 404
+                results = jsonify({'status': "not_found"})
+        return results,status
+
 
 	
 if __name__ == '__main__':
