@@ -3,6 +3,7 @@ from ipwhois import IPWhois
 import requests
 import json
 import elastastore
+import whois
 from elasticsearch import Elasticsearch
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
@@ -104,6 +105,30 @@ def get_search(search):
                 results = jsonify({'status': "not_found"})
         return results,status
 
+@app.route('/whois/domain/<domain>', methods=['GET'])
+def get_whois_domain(domain):
+        es = Elasticsearch()
+        id_num = domain
+        does_exist = es.exists(index='domain', doc_type='domain', id = domain)
+        print does_exist
+        if does_exist is True:
+                status = 200
+                print "Found it!"
+                get_record = es.get(index='domain',doc_type='domain', id = domain)
+                results = jsonify(get_record['_source'])
+        else:
+                try:
+                        obj = whois.whois(domain)
+                        status = 200
+                        results = jsonify(obj)
+                        es.index(index='domain', doc_type='domain', id=domain, body=obj)
+
+                except Exception as e:
+                        print e
+                        results_raw = jsonify({'status': "not_found"})
+                        status = 404
+                        results = jsonify({'status': "not_found"})
+        return results,status
 
 	
 if __name__ == '__main__':
