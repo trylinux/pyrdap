@@ -108,31 +108,49 @@ def get_search(search):
                 results = jsonify({'status': "not_found"})
         return results,status
 
-#@app.route('/whois/domain/<domain>', methods=['GET'])
-#def get_whois_domain(domain):
-#        es = Elasticsearch()
-#        id_num = domain
-#        does_exist = es.exists(index='domain', doc_type='domain', id = domain)
-#        print does_exist
-#        if does_exist is True:
-#                status = 200
-#                print "Found it!"
-#                get_record = es.get(index='domain',doc_type='domain', id = domain)
-#                results = jsonify(get_record['_source'])
-#        else:
-#                try:
-#                        obj = whois.whois(domain)
-#                        status = 200
-#                        results = jsonify(obj)
-#                        es.index(index='domain', doc_type='domain', id=domain, body=obj)
-#
-#                except Exception as e:
-#                        print e
-#                        results_raw = jsonify({'status': "not_found"})
-#                        status = 404
-#                        results = jsonify({'status': "not_found"})
-#        return results,status
-#
+@app.route('/whois/domain/<domain>', methods=['GET'])
+@app.route('/whois/domain/<domain>/refresh/<refresh>', methods=['GET'])
+
+def get_whois_domain(domain,refresh=None):
+        es = Elasticsearch()
+        id_num = domain
+        does_exist = es.exists(index='domain', doc_type='domain', id = domain)
+        print does_exist
+        if does_exist is True and refresh is None:
+                status = 200
+                print "Found it!"
+                get_record = es.get(index='domain',doc_type='domain', id = domain)
+                results = jsonify(get_record['_source'])
+	elif does_exist is True and refresh is not None:
+		status = 200
+		print "Forcing refresh!"
+		es.delete(index='domain', doc_type='domain', id = domain)
+                try:
+                        obj = whois.whois(domain)
+                        status = 200
+                        results = jsonify(obj)
+                        es.index(index='domain', doc_type='domain', id=domain, body=obj)
+
+                except Exception as e:
+                        print e
+                        results_raw = jsonify({'status': "not_found"})
+                        status = 404
+	     	
+		
+        else:
+                try:
+                        obj = whois.whois(domain)
+                        status = 200
+                        results = jsonify(obj)
+                        es.index(index='domain', doc_type='domain', id=domain, body=obj)
+
+                except Exception as e:
+                        print e
+                        results_raw = jsonify({'status': "not_found"})
+                        status = 404
+                        results = jsonify({'status': "not_found"})
+        return results,status
+
 	
 if __name__ == '__main__':
 	app.run(host='0.0.0.0',port=8006,debug=True,threaded=True)
