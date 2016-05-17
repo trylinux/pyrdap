@@ -3,6 +3,8 @@ from ipwhois import IPWhois
 import requests
 import json
 import elastastore
+import sys
+sys.path.append("/opt/pyrdap/whois")
 import whois
 from elasticsearch import Elasticsearch
 app = Flask(__name__)
