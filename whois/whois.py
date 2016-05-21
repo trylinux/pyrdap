@@ -149,6 +149,8 @@ class NICClient(object):
             a = NICClient.SRSWHOIS
         elif 'click' in str(tld):
             a = 'whois.uniregistry.net'
+	elif 'chat' in str(tld):
+	    a = 'whois.donuts.co'
         else:
             a = tld + NICClient.QNICHOST_TAIL
         return a
