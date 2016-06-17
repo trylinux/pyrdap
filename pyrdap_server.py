@@ -65,17 +65,35 @@ def get_rdap_asn(asn):
 	return results,status
 
 @app.route('/whois/ip/<ip>', methods=['GET'])
-def get_whois_ip(ip):
+@app.route('/whois/ip/<ip>/refresh/<refresh>', methods=['GET'])
+def get_whois_ip(ip,refresh=None):
 	es = Elasticsearch()
 	print repr(ip)
 	id_num = str(ip).replace(".","0")
 	does_exist = es.exists(index='rwhois', doc_type='ipaddr', id = id_num)
 	print does_exist
-	if does_exist is True:
+	if does_exist is True and refresh is None:
 		status = 200
 		print "Found it!"
 		get_record = es.get(index='rwhois',doc_type='ipaddr', id = id_num)
 		results = jsonify(get_record['_source'])
+	elif does_exist is True and refresh is not None:
+                status = 200
+                print "Forcing refresh!"
+                es.delete(index='rwhois', doc_type='ipaddr', id = id_num)
+                try:
+                        obj = IPWhois(ip)
+                        status = 200
+                        results = jsonify(obj)
+                        es.index(index='rwhois', doc_type='ipaddr', id=id_num, body=obj)
+
+                except Exception as e:
+                        print e
+                        results = jsonify({'status': "not_found"})
+                        status = 404
+
+
+	
 	else:
 		try:
 			obj = IPWhois(ip)
