@@ -83,9 +83,14 @@ def get_whois_ip(ip,refresh=None):
                 es.delete(index='rwhois', doc_type='ipaddr', id = id_num)
                 try:
                         obj = IPWhois(ip)
+                        try:
+                                results_raw = obj.lookup(get_referral=True)
+                        except:
+                                results_raw = obj.lookup()
+
                         status = 200
-                        results = jsonify(obj)
-                        es.index(index='rwhois', doc_type='ipaddr', id=id_num, body=obj)
+                        results = jsonify(results_raw)
+                        es.index(index='rwhois', doc_type='ipaddr', id=id_num, body=results_raw)
 
                 except Exception as e:
                         print e
