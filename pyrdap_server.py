@@ -1,5 +1,7 @@
 from flask import Flask,jsonify,session
 from ipwhois import IPWhois
+import socket
+import socks
 import requests
 import json
 import elastastore
@@ -82,7 +84,8 @@ def get_whois_ip(ip,refresh=None):
                 print "Forcing refresh!"
                 es.delete(index='rwhois', doc_type='ipaddr', id = id_num)
                 try:
-                        obj = IPWhois(ip)
+                        ipwhois.net.socks.setdefaultproxy(ipwhois.net.socks.SOCKS5,"localhost")
+			obj = IPWhois(ip)
                         try:
                                 results_raw = obj.lookup(get_referral=True)
                         except:
