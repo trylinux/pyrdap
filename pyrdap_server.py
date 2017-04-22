@@ -1,4 +1,5 @@
 from flask import Flask,jsonify,session
+import ipwhois
 from ipwhois import IPWhois
 import socket
 import socks
@@ -32,7 +33,7 @@ def get_rdap_ip(ip):
 			es.index(index='rdap', doc_type='ipaddr', id=ip, body=json.dumps(results_raw))
 		except Exception as e:
 			print e
-			results_raw = jsonify({'status': "not_found"}) 
+			results = jsonify({'status': "not_found"}) 
 			status = 404
 			results = jsonify({'status': "not_found"})
 	return results,status
@@ -72,28 +73,28 @@ def get_whois_ip(ip,refresh=None):
 	es = Elasticsearch()
 	print repr(ip)
 	id_num = str(ip).replace(".","0")
-	does_exist = es.exists(index='rwhois', doc_type='ipaddr', id = id_num)
+	does_exist = es.exists(index='rwhois2', doc_type='ipaddr', id = id_num)
 	print does_exist
 	if does_exist is True and refresh is None:
 		status = 200
 		print "Found it!"
-		get_record = es.get(index='rwhois',doc_type='ipaddr', id = id_num)
+		get_record = es.get(index='rwhois2',doc_type='ipaddr', id = id_num)
 		results = jsonify(get_record['_source'])
 	elif does_exist is True and refresh is not None:
                 status = 200
                 print "Forcing refresh!"
-                es.delete(index='rwhois', doc_type='ipaddr', id = id_num)
+                es.delete(index='rwhois2', doc_type='ipaddr', id = id_num)
                 try:
                         ipwhois.net.socks.setdefaultproxy(ipwhois.net.socks.SOCKS5,"localhost")
 			obj = IPWhois(ip)
                         try:
-                                results_raw = obj.lookup(get_referral=True)
+                                results_raw = obj.lookup_whois(get_referral=True,inc_nir=True)
                         except:
-                                results_raw = obj.lookup()
+                                results_raw = obj.lookup_whois()
 
                         status = 200
                         results = jsonify(results_raw)
-                        es.index(index='rwhois', doc_type='ipaddr', id=id_num, body=results_raw)
+                        es.index(index='rwhois2', doc_type='ipaddr', id=id_num, body=results_raw)
 
                 except Exception as e:
                         print e
@@ -106,15 +107,20 @@ def get_whois_ip(ip,refresh=None):
 		try:
 			obj = IPWhois(ip)
 			try:
-				results_raw = obj.lookup(get_referral=True)
+				results_raw = obj.lookup_whois(get_referral=True)
 			except:
-				results_raw = obj.lookup()
+				results_raw = obj.lookup_whois()
 			status = 200
 			results = jsonify(results_raw)
 			id_num = str(ip).replace(".","0")
-			es.index(index='rwhois', doc_type='ipaddr', id=id_num, body=results_raw)
-	
+                        print results
+                        try:
+				es.index(index='rwhois2', doc_type='ipaddr', id=id_num, body=results_raw)
+			except Exception as e:
+				print "Elasticsearch encountered a problem ", e
+                                pass
 		except Exception as e:
+                        #print results_raw
         	        print e
                 	results_raw = jsonify({'status': "not_found"})
 	                status = 404
@@ -126,7 +132,7 @@ def get_search(search):
 	es = Elasticsearch()
 	a = str(search)
 	try:
-		b = es.search(index='rwhois',size='10000', body={"query": {"filtered": {"query":{ "query_string": { "query": a}}}}})
+		b = es.search(index='rwhois2',size='10000', body={"query": {"filtered": {"query":{ "query_string": { "query": a}}}}})
 		status = 200
 		results = jsonify(b)
 	except Exception as e:
